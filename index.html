@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Controle Financeiro Online</title>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(120deg, #141e30, #243b55);
+    margin: 0;
+    padding: 30px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    background: #fff;
+    border-radius: 20px;
+    padding: 30px;
+}
+
+h1 { text-align: center; }
+
+select, input, button {
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    width: 100%;
+}
+
+button {
+    background: #243b55;
+    color: #fff;
+    cursor: pointer;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin-top: 25px;
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 25px;
+}
+
+.card {
+    background: #f4f6f8;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+}
+
+.valor {
+    font-size: 26px;
+    font-weight: bold;
+}
+
+table {
+    width: 100%;
+    margin-top: 25px;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+}
+
+th {
+    background: #243b55;
+    color: #fff;
+}
+
+.delete-btn {
+    background: #c0392b;
+    padding: 6px 12px;
+    border-radius: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h1>Controle Financeiro Mensal</h1>
+
+<select id="filtroMes" onchange="carregar()">
+<option>Janeiro</option><option>Fevereiro</option><option>Março</option>
+<option>Abril</option><option>Maio</option><option>Junho</option>
+<option>Julho</option><option>Agosto</option><option>Setembro</option>
+<option>Outubro</option><option>Novembro</option><option>Dezembro</option>
+</select>
+
+<div class="dashboard">
+<div class="card">Receitas<br><span class="valor">R$ <span id="receitas">0</span></span></div>
+<div class="card">Despesas<br><span class="valor">R$ <span id="despesas">0</span></span></div>
+<div class="card">Lucro<br><span class="valor">R$ <span id="lucro">0</span></span></div>
+</div>
+
+<div class="form-grid">
+<select id="tipo">
+<option value="receita">Receita</option>
+<option value="despesa">Despesa</option>
+</select>
+
+<input type="date" id="data">
+<input type="text" id="descricao" placeholder="Descrição">
+<input type="number" id="valor" placeholder="Valor">
+<button onclick="adicionar()">Adicionar</button>
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Data</th>
+<th>Descrição</th>
+<th>Valor</th>
+<th>Ação</th>
+</tr>
+</thead>
+<tbody id="tabela"></tbody>
+</table>
+</div>
+
+<script>
+/* ================= FIREBASE CONFIG ================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAiSpc2xUaSFoZha7jrsD8dUWKhyFZb2mU",
+  authDomain: "controle-financeiro-final.firebaseapp.com",
+  projectId: "controle-financeiro-final",
+  appId: "1:814511346108:web:7ba1086107b7dea5531bb9"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* ================= FUNÇÕES ================= */
+document.getElementById("data").valueAsDate = new Date();
+
+async function adicionar() {
+    await db.collection("financeiro").add({
+        mes: filtroMes.value,
+        tipo: tipo.value,
+        data: data.value,
+        descricao: descricao.value,
+        valor: Number(valor.value)
+    });
+    carregar();
+}
+
+async function excluir(id) {
+    await db.collection("financeiro").doc(id).delete();
+    carregar();
+}
+
+async function carregar() {
+    tabela.innerHTML = "";
+    let r = 0, d = 0;
+
+    const snap = await db
+        .collection("financeiro")
+        .where("mes", "==", filtroMes.value)
+        .get();
+
+    snap.forEach(doc => {
+        const x = doc.data();
+        tabela.innerHTML += `
+        <tr>
+            <td>${x.tipo}</td>
+            <td>${x.data}</td>
+            <td>${x.descricao}</td>
+            <td>R$ ${x.valor.toFixed(2)}</td>
+            <td>
+              <button class="delete-btn" onclick="excluir('${doc.id}')">
+                Excluir
+              </button>
+            </td>
+        </tr>
+        `;
+        x.tipo === "receita" ? r += x.valor : d += x.valor;
+    });
+
+    receitas.innerText = r.toFixed(2);
+    despesas.innerText = d.toFixed(2);
+    lucro.innerText = (r - d).toFixed(2);
+}
+
+carregar();
+</script>
+
+</body>
+</html>
